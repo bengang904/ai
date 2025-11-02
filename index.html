@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WebLLM AI Chat</title>
+<title>WebLLM-AI-Chat</title>
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-vsc-dark-plus.min.css" rel="stylesheet" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js"></script>
@@ -348,7 +348,7 @@ async function init() {
     status.textContent = "初始化模型...";
     sendBtn.disabled = true;
     const runtime = "gpu" in navigator ? "webgpu" : "wasm";
-    const modelId = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
+    const modelId = "Llama-3.2-1B-Instruct-q4f32_1-MLC";
 
     try {
         engine = await webllm.CreateMLCEngine(modelId, {
@@ -505,4 +505,3 @@ init();
 
 </body>
 </html>
-

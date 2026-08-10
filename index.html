@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CyberLLM ai</title>
+  <link rel="icon" href="data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
+  <script src="./tailwindcss.js"></script>
+  <script src="./marked.min.js"></script>
+  <link rel="stylesheet" href="./dark.min.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "@mlc-ai/web-llm": "./index.js"
+      }
+    }
+  </script>
+
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; word-break: break-all; }
+    .markdown-body p:last-child { margin-bottom: 0; }
+    .markdown-body pre { background: #030409; padding: 0.85rem; border-radius: 0.75rem; margin: 0.6rem 0; overflow-x: auto; border: 1px solid rgba(168,85,247,0.15); }
+    .markdown-body code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.825em; color: #c084fc; background: rgba(168,85,247,0.1); padding: 0.15rem 0.3rem; border-radius: 0.35rem; }
+    .markdown-body pre code { color: #e9d5ff; background: transparent; padding: 0; }
+    .markdown-body ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.75rem; }
+    .markdown-body ol { list-style-type: decimal; padding-left: 1.25rem; margin-bottom: 0.75rem; }
+    .markdown-body h1, .markdown-body h2, .markdown-body h3 { font-weight: 700; margin-top: 1rem; margin-bottom: 0.4rem; color: #f3e8ff; font-size: 1rem; }
+    .markdown-body blockquote { border-left: 3px solid #a855f7; padding-left: 0.75rem; color: #d8b4fe; background: rgba(168,85,247,0.05); border-radius: 0 0.5rem 0.5rem 0; padding-top: 0.2rem; padding-bottom: 0.2rem; }
+    
+    * { -webkit-tap-highlight-color: transparent; }
+    ::-webkit-scrollbar { width: 3px; height: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.2); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(168,85,247,0.4); }
+  </style>
+</head>
+<body class="bg-[#05050a] text-purple-100 h-[100dvh] flex flex-col font-sans antialiased selection:bg-purple-600 selection:text-white overflow-hidden">
+
+  <div id="init-overlay" class="fixed inset-0 bg-[#030307]/95 backdrop-blur-xl z-50 flex flex-col items-center justify-center p-4 text-white transition-all duration-700">
+    <div class="w-full max-w-xs bg-[#0b0b14]/90 border border-purple-500/20 rounded-2xl p-5 shadow-2xl shadow-purple-950/50 relative overflow-hidden backdrop-blur-2xl">
+      <div class="absolute -right-8 -top-8 w-32 h-32 bg-purple-600/10 rounded-full blur-2xl pointer-events-none"></div>
+      <div class="absolute -left-8 -bottom-8 w-32 h-32 bg-fuchsia-600/10 rounded-full blur-2xl pointer-events-none"></div>
+      
+      <div class="flex items-center space-x-3 mb-4 relative z-10">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-fuchsia-600 flex items-center justify-center text-white shadow-lg shadow-purple-600/30 flex-shrink-0">
+          <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <h2 class="text-sm font-bold tracking-tight text-white truncate">加载核心引擎</h2>
+          <p id="init-subtext" class="text-[11px] text-purple-300/70 truncate mt-0.5">准备本地模型...</p>
+        </div>
+      </div>
+
+      <div class="space-y-2.5 relative z-10">
+        <div class="flex justify-between text-[11px] font-medium text-purple-200">
+          <span id="init-status-text" class="truncate pr-2">初始化环境...</span>
+          <span id="init-status-percent" class="font-mono text-purple-400 flex-shrink-0">0%</span>
+        </div>
+        <div class="w-full bg-[#030307] rounded-full h-1.5 p-0.5 overflow-hidden border border-purple-500/20">
+          <div id="init-progress-bar" class="bg-gradient-to-r from-purple-600 via-fuchsia-500 to-purple-400 h-full rounded-full w-0 transition-all duration-300 ease-out shadow-sm shadow-purple-500/50"></div>
+        </div>
+        <div class="flex justify-between text-[10px] text-purple-400/60 font-mono pt-0.5">
+          <span>状态:</span>
+          <span id="bytes-counter" class="text-purple-300 font-medium truncate max-w-[150px]">准备就绪</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex-1 flex flex-col h-full bg-gradient-to-b from-[#05050a] via-[#080512] to-[#030307] overflow-hidden">
+    <header class="bg-[#090712]/80 backdrop-blur-md border-b border-purple-900/30 px-3.5 py-2.5 flex items-center justify-between sticky top-0 z-10 shadow-md shadow-purple-950/20 flex-shrink-0">
+      <div class="flex items-center space-x-2.5 min-w-0">
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-fuchsia-600 flex items-center justify-center text-white shadow-md shadow-purple-600/30 flex-shrink-0">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <div class="min-w-0">
+          <h1 class="font-bold text-white tracking-tight text-xs leading-tight truncate">CyberLLM</h1>
+          <p class="text-[10px] text-purple-400/70 truncate">Local AI 1B</p>
+        </div>
+      </div>
+      <div id="status-badge" class="text-[10px] px-2.5 py-1 bg-purple-950/50 text-purple-300 border border-purple-500/30 rounded-full font-medium flex items-center gap-1.5 shadow-inner flex-shrink-0">
+        <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+        初始化
+      </div>
+    </header>
+
+    <main id="chat-history" class="flex-1 overflow-y-auto px-3 py-4 space-y-4 max-w-xl mx-auto w-full">
+      <div class="bg-[#0c0a18]/70 backdrop-blur-sm rounded-2xl p-4 border border-purple-500/20 shadow-lg shadow-purple-950/30 text-center space-y-2 my-2 animate-fade-in">
+        <div class="w-10 h-10 bg-purple-500/10 text-purple-400 rounded-xl flex items-center justify-center mx-auto border border-purple-500/20 shadow-inner">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+        </div>
+        <h2 class="text-xs font-bold text-purple-100">本地离线模型已挂载</h2>
+        <p class="text-[11px] text-purple-300/70 max-w-[260px] mx-auto leading-relaxed">
+          硬件加速就绪，随时开始加密本地对话。
+        </p>
+      </div>
+    </main>
+
+    <footer class="p-2.5 sm:p-4 bg-gradient-to-t from-[#030307] via-[#05050a]/80 to-transparent flex-shrink-0">
+      <div class="max-w-xl mx-auto">
+        <form id="chat-form" class="flex items-end gap-1.5 bg-[#0b0916] rounded-2xl p-2 border border-purple-500/30 shadow-xl shadow-purple-950/40 focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-500/20 transition duration-200">
+          <textarea id="message-input" rows="1" placeholder="输入消息..." class="flex-1 bg-transparent border-0 focus:ring-0 resize-none max-h-24 py-1.5 px-1.5 text-purple-100 placeholder-purple-400/40 text-xs outline-none font-sans"></textarea>
+
+          <button type="submit" id="send-btn" disabled class="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:opacity-90 active:scale-95 disabled:bg-purple-950/40 disabled:text-purple-600/50 text-white p-2 rounded-xl transition shadow-md shadow-purple-600/30 disabled:shadow-none cursor-pointer disabled:cursor-not-allowed flex-shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          </button>
+        </form>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module">
+    import { CreateMLCEngine, prebuiltAppConfig } from "@mlc-ai/web-llm";
+
+    marked.setOptions({
+      highlight: function(code, lang) {
+        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+        return hljs.highlight(code, { language }).value;
+      },
+      langPrefix: 'hljs language-'
+    });
+
+    const MODEL_ID = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
+    const origin = window.location.origin;
+
+    prebuiltAppConfig.model_list.unshift({
+      model: `${origin}/models/Llama-3.2-1B-Instruct-q4f16_1-MLC/`,
+      model_id: MODEL_ID,
+      model_lib: prebuiltAppConfig.model_list.find(m => m.model_id === MODEL_ID)?.model_lib || "./package.json"
+    });
+
+    let engine = null;
+    const chatHistory = [];
+
+    const initOverlay = document.getElementById("init-overlay");
+    const initSubtext = document.getElementById("init-subtext");
+    const initStatusText = document.getElementById("init-status-text");
+    const initStatusPercent = document.getElementById("init-status-percent");
+    const initProgressBar = document.getElementById("init-progress-bar");
+    const bytesCounter = document.getElementById("bytes-counter");
+    const statusBadge = document.getElementById("status-badge");
+    
+    const chatHistoryEl = document.getElementById("chat-history");
+    const chatForm = document.getElementById("chat-form");
+    const messageInput = document.getElementById("message-input");
+    const sendBtn = document.getElementById("send-btn");
+
+    async function checkWebGPUSupport() {
+      if (!navigator.gpu) {
+        throw new Error("浏览器不支持 WebGPU");
+      }
+      const adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) {
+        throw new Error("找不到可用 GPU");
+      }
+    }
+
+    async function initModel() {
+      try {
+        initStatusText.innerText = "注册核心拦截服务...";
+        if ('serviceWorker' in navigator) {
+          try {
+            const reg = await navigator.serviceWorker.register('./sw.js');
+            await navigator.serviceWorker.ready;
+          } catch (e) {
+            console.warn("ServiceWorker 注册异常:", e);
+          }
+        }
+
+        await checkWebGPUSupport();
+
+        initStatusText.innerText = "检查本地模型分片...";
+        const targetUrl = `${origin}/models/Llama-3.2-1B-Instruct-q4f16_1-MLC/resolve/main/params_shard_0.bin`;
+        
+        const cache = await caches.open('cyberllm-merge-cache');
+        let cachedRes = await cache.match(targetUrl);
+
+        if (!cachedRes) {
+          initStatusText.innerText = "正在下载并强制合并分片 (part1 & part2)...";
+          
+          const part1Url = targetUrl + ".part1";
+          const part2Url = targetUrl + ".part2";
+
+          const [res1, res2] = await Promise.all([
+            fetch(part1Url),
+            fetch(part2Url)
+          ]);
+
+          if (!res1.ok || !res2.ok) {
+            throw new Error(`分片下载失败: part1(${res1.status}), part2(${res2.status})。请确保分片文件放在服务器对应目录！`);
+          }
+
+          initStatusText.innerText = "正在读取二进制数据...";
+          const [buf1, buf2] = await Promise.all([
+            res1.arrayBuffer(),
+            res2.arrayBuffer()
+          ]);
+
+          initStatusText.innerText = "正在内存中暴力拼接大文件...";
+          const mergedArray = new Uint8Array(buf1.byteLength + buf2.byteLength);
+          mergedArray.set(new Uint8Array(buf1), 0);
+          mergedArray.set(new Uint8Array(buf2), buf1.byteLength);
+
+          initStatusText.innerText = "正在写入虚拟代理缓存...";
+          const finalResponse = new Response(mergedArray, {
+            status: 200,
+            statusText: 'OK',
+            headers: {
+              'Content-Type': 'application/octet-stream',
+              'Content-Length': mergedArray.byteLength.toString()
+            }
+          });
+
+          await cache.put(targetUrl, finalResponse);
+          bytesCounter.innerText = "合并完成";
+          console.log("[CyberLLM] 强制前置合并执行完毕，完整文件已注入 Cache。");
+        } else {
+          bytesCounter.innerText = "已使用合并缓存";
+          console.log("[CyberLLM] 检测到缓存已存在，跳过合并。");
+        }
+        initStatusText.innerText = "正在加载 WebLLM 引擎...";
+        engine = await CreateMLCEngine(MODEL_ID, {
+          appConfig: prebuiltAppConfig,
+          context_window_size: 2048,
+          initProgressCallback: (progress) => {
+            initStatusText.innerText = progress.text;
+            const pct = Math.min(Math.round((progress.progress || 0) * 100), 100);
+            initStatusPercent.innerText = `${pct}%`;
+            initProgressBar.style.width = `${pct}%`;
+            bytesCounter.innerText = progress.text;
+          }
+        });
+
+        initStatusText.innerText = "载入计算单元...";
+        await engine.reload(MODEL_ID);
+
+        initOverlay.classList.add("opacity-0", "pointer-events-none");
+        setTimeout(() => initOverlay.classList.add("hidden"), 700);
+        sendBtn.disabled = false;
+        
+        statusBadge.className = "text-[10px] px-2.5 py-1 bg-purple-950/80 text-purple-300 border border-purple-500/40 rounded-full font-medium flex items-center gap-1.5 shadow-inner flex-shrink-0";
+        statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span> 在线`;
+
+        messageInput.focus();
+
+      } catch (err) {
+        console.error("初始化错误:", err);
+        initStatusText.innerText = `致命错误: ${err.message || err}`;
+        initStatusText.classList.add("text-rose-400");
+        bytesCounter.innerText = "合并中断";
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", initModel);
+
+    messageInput.addEventListener("input", () => {
+      messageInput.style.height = "auto";
+      messageInput.style.height = `${Math.min(messageInput.scrollHeight, 96)}px`;
+    });
+
+    function appendMessage(role, content) {
+      const wrapper = document.createElement("div");
+      wrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`;
+
+      const container = document.createElement("div");
+      container.className = `max-w-[90%] rounded-2xl px-3.5 py-2.5 shadow-sm text-xs ${
+        role === 'user' 
+          ? 'bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white rounded-br-sm shadow-purple-950/50' 
+          : 'bg-[#0c0a18] border border-purple-500/20 text-purple-100 rounded-bl-sm markdown-body shadow-purple-950/20'
+      }`;
+
+      const textNode = document.createElement("div");
+      if (role === 'user') {
+        textNode.innerText = content;
+      } else {
+        textNode.innerHTML = marked.parse(content);
+      }
+      container.appendChild(textNode);
+
+      wrapper.appendChild(container);
+      chatHistoryEl.appendChild(wrapper);
+      chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+
+      return textNode;
+    }
+
+    chatForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = messageInput.value.trim();
+      if (!text || !engine) return;
+
+      sendBtn.disabled = true;
+      messageInput.disabled = true;
+
+      appendMessage("user", text);
+
+      messageInput.value = "";
+      messageInput.style.height = "auto";
+
+      chatHistory.push({ role: "user", content: text });
+
+      const botResponseNode = appendMessage("assistant", "思考中...");
+
+      try {
+        const completion = await engine.chat.completions.create({
+          messages: chatHistory,
+          stream: true
+        });
+
+        let fullResponse = "";
+        for await (const chunk of completion) {
+          const delta = chunk.choices[0]?.delta?.content || "";
+          fullResponse += delta;
+          botResponseNode.innerHTML = marked.parse(fullResponse);
+          chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+        }
+
+        chatHistory.push({ role: "assistant", content: fullResponse });
+
+      } catch (err) {
+        console.error("推理异常:", err);
+        botResponseNode.innerText = `[中断]: ${err.message || "计算出错"}`;
+      } finally {
+        sendBtn.disabled = false;
+        messageInput.disabled = false;
+        messageInput.focus();
+      }
+    });
+  </script>
+</body>
+</html>
